@@ -1,0 +1,49 @@
+# 🌐 Node.js
+node_modules/
+*.log
+.env
+.env.*              # Handles .env.local, .env.production, etc.
+package-lock.json
+
+# 📦 Yarn (if used)
+yarn.lock
+
+# ⚙️ Build outputs
+dist/
+build/
+out/
+.next/
+.cache/
+.nuxt/
+
+# 📁 Git from submodules (important)
+frontend/.git
+backend/.git
+
+# 📁 IDE/Editor configs
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# 🖼️ System files
+.DS_Store
+Thumbs.db
+*.swp
+
+# 📊 Test outputs and coverage
+coverage/
+.nyc_output/
+
+# 📂 Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# 🔥 Misc
+*.tgz
+*.zip
+*.env.backup
+*.local
