@@ -1,139 +1,150 @@
-import React, { useEffect, useState, useRef } from "react";
-import api from "../api";
-import ReactToPrint from "react-to-print";
+import React, { useEffect, useState, useRef } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { utils, writeFileXLSX } from 'xlsx';
+import "./Billing.css";
 
 const Billing = () => {
-  const [menu, setMenu] = useState([]);
-  const [selectedItems, setSelectedItems] = useState([]);
-  const [customerName, setCustomerName] = useState("");
-  const printRef = useRef();
+  const [menuItems, setMenuItems] = useState([]);
+  const [quantities, setQuantities] = useState({});
+  const [customerName, setCustomerName] = useState('');
+  const [showBill, setShowBill] = useState(false);
+  const billRef = useRef();
+
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchMenu = async () => {
-      try {
-        const res = await api.get("/menu");
-        setMenu(res.data);
-      } catch (err) {
-        console.error("Error fetching menu", err);
+    const token = localStorage.getItem('token');
+    axios.get('http://localhost:5000/api/menu', {
+      headers: {
+        Authorization: `Bearer ${token}`
       }
-    };
-    fetchMenu();
+    })
+      .then(res => {
+        setMenuItems(res.data);
+        const initialQty = {};
+        res.data.forEach(item => (initialQty[item._id] = 0));
+        setQuantities(initialQty);
+      })
+      .catch(err => console.error('Error fetching menu:', err));
   }, []);
 
-  const handleSelectItem = (item) => {
-    const index = selectedItems.findIndex((i) => i._id === item._id);
-    if (index >= 0) {
-      const newItems = [...selectedItems];
-      newItems[index].qty++;
-      setSelectedItems(newItems);
-    } else {
-      setSelectedItems([...selectedItems, { ...item, qty: 1 }]);
-    }
+  const handleQuantityChange = (id, delta) => {
+    setQuantities(prev => ({
+      ...prev,
+      [id]: Math.max(prev[id] + delta, 0)
+    }));
   };
 
-  const handleQtyChange = (id, delta) => {
-    const updated = selectedItems
-      .map((item) =>
-        item._id === id ? { ...item, qty: Math.max(1, item.qty + delta) } : item
-      )
-      .filter((item) => item.qty > 0);
-    setSelectedItems(updated);
+  const handleClearAll = () => {
+    const clearedQuantities = {};
+    menuItems.forEach(item => {
+      clearedQuantities[item._id] = 0;
+    });
+    setQuantities(clearedQuantities);
+    setCustomerName('');
+    setShowBill(false);
   };
 
-  const total = selectedItems.reduce(
-    (acc, item) => acc + item.qty * item.price,
-    0
-  );
+  const totalAmount = menuItems.reduce((acc, item) => {
+    return acc + (item.price * (quantities[item._id] || 0));
+  }, 0);
 
-  const handlePrint = async () => {
-    try {
-      await api.post("/bills", {
-        customerName,
-        items: selectedItems,
-        total,
-      });
-      setSelectedItems([]);
-      setCustomerName("");
-    } catch (err) {
-      console.error("Failed to save bill", err);
-    }
+  const filteredItems = menuItems.filter(item => quantities[item._id] > 0);
+
+  const handleSaveToExcel = () => {
+    const now = new Date();
+    const formattedDate = now.toISOString().split('T')[0];
+    const time = now.toLocaleString();
+
+    const minimalData = [{
+      "Customer Name": customerName || "N/A",
+      "Total Amount": totalAmount,
+      "Date & Time": time
+    }];
+
+    const ws = utils.json_to_sheet(minimalData);
+    const wb = utils.book_new();
+    utils.book_append_sheet(wb, ws, "Bill");
+
+    const fileName = `${formattedDate}.xlsx`;
+    writeFileXLSX(wb, fileName);  // Triggers download
+  };
+
+  const handleCreateBill = () => {
+    setShowBill(true);
+    setTimeout(() => {
+      handleSaveToExcel();
+      window.print();
+    }, 500);
   };
 
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-4">Billing Page</h2>
+    <div className="billing-page">
+      <div className="billing-container">
+        <button onClick={() => navigate('/dashboard')} className="back-button">
+          <svg xmlns="http://www.w3.org/2000/svg" className="back-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
 
-      <input
-        type="text"
-        placeholder="Enter Customer Name"
-        value={customerName}
-        onChange={(e) => setCustomerName(e.target.value)}
-        className="border p-2 mb-4 w-full"
-      />
+        <div className="billing-card">
+          <h1 className="billing-title">Restaurant Billing</h1>
 
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        {menu.map((item) => (
-          <div key={item._id} className="border p-2 flex justify-between">
-            <span>{item.name} - ₹{item.price}</span>
-            <button
-              onClick={() => handleSelectItem(item)}
-              className="bg-blue-500 text-white px-2 py-1 rounded"
-            >
-              Add
-            </button>
+          <div className="customer-name-input">
+            <label className="customer-label">Customer Name</label>
+            <input
+              type="text"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              className="customer-input"
+              placeholder="Enter customer name"
+            />
           </div>
-        ))}
-      </div>
 
-      <div ref={printRef} className="border p-4 mb-4">
-        <h3 className="font-semibold mb-2">Bill Preview</h3>
-        {selectedItems.length === 0 ? (
-          <p>No items selected</p>
-        ) : (
-          <table className="w-full text-left">
-            <thead>
-              <tr>
-                <th>Dish</th>
-                <th>Qty</th>
-                <th>Price</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {selectedItems.map((item) => (
-                <tr key={item._id}>
-                  <td>{item.name}</td>
-                  <td>
-                    <button onClick={() => handleQtyChange(item._id, -1)}>-</button>
-                    <span className="mx-2">{item.qty}</span>
-                    <button onClick={() => handleQtyChange(item._id, 1)}>+</button>
-                  </td>
-                  <td>₹{item.price}</td>
-                  <td>₹{item.qty * item.price}</td>
-                </tr>
+          <div className="menu-list">
+            {menuItems.map((item) => (
+              <div key={item._id} className="menu-item">
+                <div className="item-name">{item.name}</div>
+                <div className="item-price">₹{item.price}</div>
+                <div className="quantity-controls">
+                  <button onClick={() => handleQuantityChange(item._id, -1)} className="qty-btn minus">−</button>
+                  <span className="qty-value">{quantities[item._id]}</span>
+                  <button onClick={() => handleQuantityChange(item._id, 1)} className="qty-btn plus">+</button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="total-amount">Total: ₹{totalAmount}</div>
+
+          <div className="create-bill-button">
+            <button onClick={handleCreateBill} className="create-btn">Create Bill</button>
+            <button onClick={handleClearAll} className="clear-btn" style={{ marginLeft: '1rem' }}>Clear All</button>
+          </div>
+        </div>
+
+        {showBill && (
+          <div className="bill-overlay">
+            <div className="bill-popup" ref={billRef}>
+              <h2 className="bill-heading">🍽️___Suvarn___ Bill</h2>
+              <div className="bill-details">
+                <div>Customer: <span className="bold">{customerName || "N/A"}</span></div>
+                <div>Date: {new Date().toLocaleString()}</div>
+              </div>
+              {filteredItems.map((item, i) => (
+                <div key={i} className="bill-item">
+                  <div>{item.name}</div>
+                  <div>₹{item.price} × {quantities[item._id]}</div>
+                </div>
               ))}
-              <tr>
-                <td colSpan="3" className="text-right font-bold">Total</td>
-                <td className="font-bold">₹{total}</td>
-              </tr>
-            </tbody>
-          </table>
-        )}
-      </div>
+              <div className="bill-total">Total: ₹{totalAmount}</div>
+              <div className="thank-you-msg">Thank you! 🙏</div>
 
-      <div className="flex gap-4">
-        <ReactToPrint
-          trigger={() => (
-            <button
-              className="bg-green-600 text-white px-4 py-2 rounded"
-              disabled={!customerName || selectedItems.length === 0}
-            >
-              Print Bill
-            </button>
-          )}
-          content={() => printRef.current}
-          onAfterPrint={handlePrint}
-        />
+              <button onClick={() => setShowBill(false)} className="close-btn">Close</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

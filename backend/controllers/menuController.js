@@ -21,6 +21,7 @@ export const updateItem = async (req, res) => {
 
 export const deleteItem = async (req, res) => {
   const { id } = req.params;
-  await MenuItem.findByIdAndUpdate(id, { active: false });
-  res.json({ message: "Item deactivated" });
+  await MenuItem.findByIdAndDelete(id);
+  res.json({ message: "Item deleted from DB" });
 };
+

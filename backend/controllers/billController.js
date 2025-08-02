@@ -1,4 +1,5 @@
 import path from "path";
+import fs from "fs"; // ✅ To check/create 'bills' folder
 import { getFormattedDate, getCurrentTime } from "../utils/dateUtils.js";
 import { appendToExcel } from "../utils/excelUtils.js";
 import { generateInvoiceId } from "../utils/generateInvoiceId.js";
@@ -14,6 +15,12 @@ export const generateBill = async (req, res) => {
   const timeStr = getCurrentTime();       // ⏰ utils
   const invoiceId = generateInvoiceId();  // 🧾 utils
   const billFolder = path.resolve("bills");
+
+  // ✅ Ensure the folder exists
+  if (!fs.existsSync(billFolder)) {
+    fs.mkdirSync(billFolder, { recursive: true });
+  }
+
   const filePath = path.join(billFolder, `${dateStr}.xlsx`);
 
   const rows = items.map(item => ({

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import "./Login.css"
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -21,62 +22,49 @@ const Login = () => {
   };
 
   return (
-    <div style={styles.container}>
-      <h2>Admin Login</h2>
-      <form onSubmit={handleLogin} style={styles.form}>
-        <input
-          type="email"
-          placeholder="Admin Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={styles.input}
-        />
-        <input
-          type="password"
-          placeholder="Admin Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          style={styles.input}
-        />
-        <button type="submit" style={styles.button}>Login</button>
-        {error && <p style={styles.error}>{error}</p>}
-      </form>
+    <div className="login-container">
+      <div className="top-images">
+        <img className="image1" src="/images/image1.svg" alt="Descriptive alt text" />
+        <div className="main-images">
+          <img className="mainImage" src="/images/mainImage.svg" alt="Descriptive alt text" />
+          <img className="mainImage2" src="/images/main2.svg" alt="Descriptive alt text" />
+        </div>
+        <img className="image2" src="/images/image2.svg" alt="Descriptive alt text" />
+      </div>
+      <div className="admin-form">
+        <form onSubmit={handleLogin} className="login-form">
+          <div className="input-block">
+            Email:-
+            <input
+              type="email"
+              placeholder="Admin Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="login-input1"
+            /><br />
+          </div>
+          <div className="pass-block">
+            Password:-
+            <input
+              type="password"
+              placeholder="Admin Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="login-input2"
+            />
+          </div>
+          <button type="submit" className="login-button">Login</button>
+          {error && <p className="login-error">{error}</p>}
+        </form>
+      </div>
+      <div className="bottom-images">
+        <img className="image3" src="/images/image3.svg" alt="Descriptive alt text" />
+        <img className="image4" src="/images/image4.svg" alt="Descriptive alt text" />
+      </div>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    maxWidth: "400px",
-    margin: "100px auto",
-    padding: "2rem",
-    boxShadow: "0 0 10px rgba(0,0,0,0.1)",
-    borderRadius: "8px",
-    textAlign: "center",
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "1rem",
-  },
-  input: {
-    padding: "10px",
-    fontSize: "16px",
-  },
-  button: {
-    padding: "10px",
-    fontSize: "16px",
-    cursor: "pointer",
-    backgroundColor: "#333",
-    color: "#fff",
-    border: "none",
-    borderRadius: "4px",
-  },
-  error: {
-    color: "red",
-  },
 };
 
 export default Login;
